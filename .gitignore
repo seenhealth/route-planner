@@ -17,3 +17,12 @@ data/
 
 # Build output
 dist
+
+# Conductor workspace
+.context/
+
+# CSV manifests
+*.csv
+
+# TypeScript build info
+*.tsbuildinfo
