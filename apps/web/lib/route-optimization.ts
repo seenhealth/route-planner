@@ -1,5 +1,5 @@
 import type { Passenger, Trip, TripDirections, Vehicle } from "@route-planner/shared";
-import { HUB, TRIP_COLORS } from "@route-planner/shared";
+import { HUB, TRIP_COLORS, parseTime } from "@route-planner/shared";
 import { GoogleAuth } from "google-auth-library";
 
 const ROUTE_OPTIMIZATION_URL = "https://routeoptimization.googleapis.com/v1";
@@ -29,9 +29,15 @@ interface LatLng {
   longitude: number;
 }
 
+interface TimeWindow {
+  startTime: string;
+  endTime: string;
+}
+
 interface ShipmentVisit {
   arrivalLocation: LatLng;
   duration: string;
+  timeWindows?: TimeWindow[];
 }
 
 interface Shipment {
@@ -46,6 +52,8 @@ interface VehicleDef {
   displayName?: string;
   startLocation?: LatLng;
   endLocation?: LatLng;
+  startTimeWindows?: TimeWindow[];
+  endTimeWindows?: TimeWindow[];
   loadLimits?: Record<string, { maxLoad: string }>;
   routeDurationLimit?: { maxDuration: string };
   costPerHour?: number;
@@ -56,6 +64,8 @@ interface OptimizeToursRequest {
   model: {
     shipments: Shipment[];
     vehicles: VehicleDef[];
+    globalStartTime?: string;
+    globalEndTime?: string;
   };
   populatePolylines?: boolean;
   populateTransitionPolylines?: boolean;
@@ -137,6 +147,14 @@ export async function optimizeTrips(
   const driveTimeLimitSeconds = driveTimeLimitMinutes * 60;
 
   // Build shipments — one per passenger
+  // Use today's date as the reference for time windows
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayStartISO = today.toISOString(); // midnight
+  const dayEndISO = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+  const TIME_WINDOW_BUFFER_MIN = 60; // ±60 min around scheduled time
+
   const shipments: Shipment[] = geocoded.map(({ passenger }, i) => {
     // For pickups, the home is the pickup address (lat/lng).
     // For dropoffs, the home is the dest address (destLat/destLng).
@@ -149,6 +167,19 @@ export async function optimizeTrips(
       arrivalLocation: location,
       duration: "120s", // 2-minute stop time per passenger
     };
+
+    // Add time windows based on the passenger's scheduled time.
+    // This ensures the API groups passengers with similar times together
+    // and doesn't mix 8:30am pickups with 2:30pm pickups.
+    const timeMinutes = parseTime(passenger.time);
+    if (timeMinutes < 999) {
+      const windowStart = Math.max(0, timeMinutes - TIME_WINDOW_BUFFER_MIN);
+      const windowEnd = Math.min(24 * 60, timeMinutes + TIME_WINDOW_BUFFER_MIN);
+      visit.timeWindows = [{
+        startTime: new Date(today.getTime() + windowStart * 60 * 1000).toISOString(),
+        endTime: new Date(today.getTime() + windowEnd * 60 * 1000).toISOString(),
+      }];
+    }
 
     return {
       ...(type === "pickup" ? { pickups: [visit] } : { deliveries: [visit] }),
@@ -198,7 +229,12 @@ export async function optimizeTrips(
   );
 
   const request: OptimizeToursRequest = {
-    model: { shipments, vehicles: vehicleDefs },
+    model: {
+      shipments,
+      vehicles: vehicleDefs,
+      globalStartTime: dayStartISO,
+      globalEndTime: dayEndISO,
+    },
     populatePolylines: true,
     populateTransitionPolylines: true,
   };
