@@ -5,6 +5,8 @@ export interface Passenger {
   time: string;
   purpose: string;
   phone: string;
+  notes: string;
+  assistiveDevice: string;
   lat: number;
   lng: number;
   destLat: number;

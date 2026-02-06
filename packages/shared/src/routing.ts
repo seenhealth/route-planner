@@ -106,6 +106,8 @@ export function rowToPassenger(row: ManifestRow): Passenger {
     time: time || "",
     purpose: row.bookingPurpose || "",
     phone: row.phone || "",
+    notes: row.notes || "",
+    assistiveDevice: row.assistiveDevice || "",
     lat: 0, // populated later by geocoding
     lng: 0,
     destLat: 0,

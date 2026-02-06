@@ -325,6 +325,24 @@ export function TripDetail({
                           <span>{stop.passenger.phone}</span>
                         </div>
                       )}
+                      {stop.passenger.purpose && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground/70">Purpose:</span>{" "}
+                          {stop.passenger.purpose}
+                        </div>
+                      )}
+                      {stop.passenger.assistiveDevice && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground/70">Device:</span>{" "}
+                          {stop.passenger.assistiveDevice}
+                        </div>
+                      )}
+                      {stop.passenger.notes && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded px-1.5 py-1 mt-1">
+                          <span className="text-muted-foreground/70">Notes:</span>{" "}
+                          {stop.passenger.notes}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

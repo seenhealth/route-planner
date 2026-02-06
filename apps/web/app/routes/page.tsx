@@ -6,18 +6,24 @@ import { StatsBar } from "@/components/routes/stats-bar";
 import { FilterBar } from "@/components/routes/filter-bar";
 import { TripList } from "@/components/routes/trip-list";
 import { TripDetail } from "@/components/routes/trip-detail";
+import { PassengerList } from "@/components/routes/passenger-list";
+import { PassengerDetail } from "@/components/routes/passenger-detail";
 import { MapView } from "@/components/map/map-view";
 import { StopMarker } from "@/components/map/stop-marker";
 import { RouteVisualization } from "@/components/map/route-visualization";
 import { MapController } from "@/components/map/map-controller";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Loader2, List, UserSearch } from "lucide-react";
 import { ManifestSelector, formatRelativeTime } from "@/components/routes/manifest-selector";
 import type { ManifestOption } from "@/components/routes/manifest-selector";
 import { HUB } from "@route-planner/shared";
 import { useMapInteractions } from "@/hooks/use-map-interactions";
+import { buildPassengerIndex } from "@/lib/passenger-index";
+import type { PassengerInfo } from "@/lib/passenger-index";
 
 type TypeFilter = "all" | "pickup" | "dropoff";
+type SidebarView = "trips" | "passengers";
 
 interface CacheInfo {
   cached: boolean;
@@ -32,6 +38,8 @@ export default function RoutesPage() {
   const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [recomputing, setRecomputing] = useState(false);
+  const [sidebarView, setSidebarView] = useState<SidebarView>("trips");
+  const [selectedPassenger, setSelectedPassenger] = useState<PassengerInfo | null>(null);
 
   const { state: interaction, actions } = useMapInteractions();
 
@@ -51,6 +59,7 @@ export default function RoutesPage() {
         setRouteData(routePayload as RouteData);
         setCacheInfo(_cache ?? null);
         actions.clearSelectedTrip();
+        setSelectedPassenger(null);
       }
     } catch {
       // ignore
@@ -64,6 +73,7 @@ export default function RoutesPage() {
     setSelectedManifest(manifest);
     setRouteData(null);
     setCacheInfo(null);
+    setSelectedPassenger(null);
     fetchRoutes(manifest.id);
   }, [fetchRoutes]);
 
@@ -93,6 +103,64 @@ export default function RoutesPage() {
     () => filteredTrips.find((t) => t.id === interaction.selectedTripId) ?? null,
     [filteredTrips, interaction.selectedTripId]
   );
+
+  // Build passenger index from route data
+  const passengerIndex = useMemo(() => {
+    if (!routeData) return [];
+    return buildPassengerIndex(routeData);
+  }, [routeData]);
+
+  // When selecting a passenger, highlight their pickup and dropoff trips on the map
+  const handleSelectPassenger = useCallback((passenger: PassengerInfo) => {
+    setSelectedPassenger((prev) =>
+      prev?.name === passenger.name ? null : passenger
+    );
+  }, []);
+
+  // When a passenger is selected, determine which trips to highlight on the map
+  const passengerHighlightTripIds = useMemo(() => {
+    if (!selectedPassenger) return new Set<string>();
+    const ids = new Set<string>();
+    if (selectedPassenger.pickupTrip) ids.add(selectedPassenger.pickupTrip.tripId);
+    if (selectedPassenger.dropoffTrip) ids.add(selectedPassenger.dropoffTrip.tripId);
+    return ids;
+  }, [selectedPassenger]);
+
+  // Clear passenger selection when switching views
+  const handleViewChange = useCallback((view: string) => {
+    if (!view) return;
+    const newView = view as SidebarView;
+    setSidebarView(newView);
+    if (newView === "trips") {
+      setSelectedPassenger(null);
+    } else {
+      actions.clearSelectedTrip();
+    }
+  }, [actions]);
+
+  // Determine which trips to show to RouteVisualization
+  // When in passenger view with a selected passenger, only show their trips
+  const visibleTrips = useMemo(() => {
+    if (sidebarView === "passengers" && selectedPassenger && passengerHighlightTripIds.size > 0) {
+      return getAllTrips().filter((t) => passengerHighlightTripIds.has(t.id));
+    }
+    return filteredTrips;
+  }, [sidebarView, selectedPassenger, passengerHighlightTripIds, getAllTrips, filteredTrips]);
+
+  // The trip to fit the map to — either a selected trip (trips view) or passenger's trips
+  const fitToTrip = useMemo(() => {
+    if (sidebarView === "passengers" && selectedPassenger) {
+      // When a passenger is selected, fit to their first available trip
+      const tripId = selectedPassenger.pickupTrip?.tripId ?? selectedPassenger.dropoffTrip?.tripId;
+      if (tripId) {
+        return getAllTrips().find((t) => t.id === tripId) ?? null;
+      }
+      return null;
+    }
+    return selectedTrip;
+  }, [sidebarView, selectedPassenger, selectedTrip, getAllTrips]);
+
+  const hasRouteData = routeData && routeData.pickupTrips.length + routeData.dropoffTrips.length > 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -139,7 +207,7 @@ export default function RoutesPage() {
         </div>
 
         {/* Stats + filters only when we have route data */}
-        {routeData && routeData.pickupTrips.length + routeData.dropoffTrips.length > 0 && (
+        {hasRouteData && (
           <>
             <StatsBar trips={filteredTrips} />
             <FilterBar
@@ -154,8 +222,30 @@ export default function RoutesPage() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Trip list / detail sidebar */}
+        {/* Sidebar */}
         <div className="w-80 border-r overflow-hidden flex flex-col">
+          {/* View toggle — only show when route data is loaded */}
+          {hasRouteData && !loading && (
+            <div className="border-b px-3 py-1.5 flex items-center justify-center">
+              <ToggleGroup
+                type="single"
+                value={sidebarView}
+                onValueChange={handleViewChange}
+                className="gap-0"
+              >
+                <ToggleGroupItem value="trips" className="h-7 px-3 text-xs gap-1.5">
+                  <List className="h-3 w-3" />
+                  Trips
+                </ToggleGroupItem>
+                <ToggleGroupItem value="passengers" className="h-7 px-3 text-xs gap-1.5">
+                  <UserSearch className="h-3 w-3" />
+                  Passengers
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )}
+
+          {/* Sidebar content */}
           {!selectedManifest ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               Select a manifest to view routes
@@ -165,27 +255,44 @@ export default function RoutesPage() {
               <Loader2 className="h-6 w-6 animate-spin" />
               <span>Computing routes...</span>
             </div>
-          ) : selectedTrip ? (
-            <TripDetail
-              trip={selectedTrip}
-              onBack={actions.clearSelectedTrip}
-              onHoverPassenger={actions.hoverPassenger}
-              onSelectPassenger={actions.selectPassenger}
-              selectedPassengerKey={interaction.selectedPassengerKey}
-              hoveredPassengerKey={interaction.hoveredPassengerKey}
-            />
-          ) : filteredTrips.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              No routes to display
-            </div>
+          ) : sidebarView === "passengers" ? (
+            // Passenger view
+            selectedPassenger ? (
+              <PassengerDetail
+                passenger={selectedPassenger}
+                onBack={() => setSelectedPassenger(null)}
+              />
+            ) : (
+              <PassengerList
+                passengers={passengerIndex}
+                selectedName={null}
+                onSelect={handleSelectPassenger}
+              />
+            )
           ) : (
-            <TripList
-              trips={filteredTrips}
-              selectedTripId={interaction.selectedTripId}
-              hoveredTripId={interaction.hoveredTripId}
-              onSelectTrip={actions.selectTrip}
-              onHoverTrip={actions.hoverTrip}
-            />
+            // Trips view (existing behavior)
+            selectedTrip ? (
+              <TripDetail
+                trip={selectedTrip}
+                onBack={actions.clearSelectedTrip}
+                onHoverPassenger={actions.hoverPassenger}
+                onSelectPassenger={actions.selectPassenger}
+                selectedPassengerKey={interaction.selectedPassengerKey}
+                hoveredPassengerKey={interaction.hoveredPassengerKey}
+              />
+            ) : filteredTrips.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                No routes to display
+              </div>
+            ) : (
+              <TripList
+                trips={filteredTrips}
+                selectedTripId={interaction.selectedTripId}
+                hoveredTripId={interaction.hoveredTripId}
+                onSelectTrip={actions.selectTrip}
+                onHoverTrip={actions.hoverTrip}
+              />
+            )
           )}
         </div>
 
@@ -202,8 +309,8 @@ export default function RoutesPage() {
           <MapView className="h-full w-full">
             {/* Map controller for fit-to-trip zoom */}
             <MapController
-              fitToTrip={selectedTrip}
-              resetView={!selectedTrip}
+              fitToTrip={fitToTrip}
+              resetView={!fitToTrip}
             />
 
             {/* Hub marker — always visible, always on top */}
@@ -221,9 +328,26 @@ export default function RoutesPage() {
               }
             />
 
+            {/* Selected passenger home marker */}
+            {sidebarView === "passengers" && selectedPassenger && selectedPassenger.lat !== 0 && selectedPassenger.lng !== 0 && (
+              <StopMarker
+                lat={selectedPassenger.lat}
+                lng={selectedPassenger.lng}
+                label={selectedPassenger.name.charAt(0).toUpperCase()}
+                color="#e11d48"
+                zIndex={150}
+                infoContent={
+                  <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 12 }}>
+                    <strong>{selectedPassenger.name}</strong>
+                    <div style={{ color: "#555", marginTop: 2 }}>{selectedPassenger.address}</div>
+                  </div>
+                }
+              />
+            )}
+
             {/* Full route visualization layer */}
             <RouteVisualization
-              trips={filteredTrips}
+              trips={visibleTrips}
               hoveredTripId={interaction.hoveredTripId}
               selectedTripId={interaction.selectedTripId}
               hoveredPassengerKey={interaction.hoveredPassengerKey}

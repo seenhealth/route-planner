@@ -56,6 +56,24 @@ export function PassengerInfo({
             {passenger.phone}
           </div>
         )}
+        {passenger.purpose && (
+          <div>
+            <span style={{ color: "#888" }}>Purpose:</span>{" "}
+            {passenger.purpose}
+          </div>
+        )}
+        {passenger.assistiveDevice && (
+          <div>
+            <span style={{ color: "#888" }}>Assistive Device:</span>{" "}
+            {passenger.assistiveDevice}
+          </div>
+        )}
+        {passenger.notes && (
+          <div style={{ marginTop: 4, padding: "4px 6px", backgroundColor: "#f5f5f0", borderRadius: 4 }}>
+            <span style={{ color: "#888" }}>Notes:</span>{" "}
+            {passenger.notes}
+          </div>
+        )}
       </div>
     </div>
   );

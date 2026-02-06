@@ -18,19 +18,33 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const driveTimeLimitMinutes = Number(body.driveTimeLimitMinutes);
-    const timeWindowBufferMinutes = Number(body.timeWindowBufferMinutes ?? 60);
+    const current = await getConfig();
 
-    if (isNaN(driveTimeLimitMinutes) || driveTimeLimitMinutes < 15 || driveTimeLimitMinutes > 120) {
-      return NextResponse.json(
-        { error: "driveTimeLimitMinutes must be between 15 and 120" },
-        { status: 400 }
-      );
+    // Merge: only override fields that are provided
+    if (body.driveTimeLimitMinutes !== undefined) {
+      const val = Number(body.driveTimeLimitMinutes);
+      if (isNaN(val) || val < 15 || val > 120) {
+        return NextResponse.json(
+          { error: "driveTimeLimitMinutes must be between 15 and 120" },
+          { status: 400 }
+        );
+      }
+      current.driveTimeLimitMinutes = val;
     }
 
-    const config: AppConfig = { driveTimeLimitMinutes, timeWindowBufferMinutes };
-    await saveConfig(config);
-    return NextResponse.json(config);
+    if (body.timeWindowBufferMinutes !== undefined) {
+      const val = Number(body.timeWindowBufferMinutes);
+      if (isNaN(val) || val < 15 || val > 180) {
+        return NextResponse.json(
+          { error: "timeWindowBufferMinutes must be between 15 and 180" },
+          { status: 400 }
+        );
+      }
+      current.timeWindowBufferMinutes = val;
+    }
+
+    await saveConfig(current);
+    return NextResponse.json(current);
   } catch (err) {
     console.error("Error saving config:", err);
     return NextResponse.json(

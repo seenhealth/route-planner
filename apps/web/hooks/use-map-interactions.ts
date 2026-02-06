@@ -28,8 +28,12 @@ export function useMapInteractions() {
   const [selectedPassengerKey, setSelectedPassengerKey] = useState<string | null>(null);
 
   const hoverTrip = useCallback((tripId: string | null) => {
+    // Don't allow hovering other trips when one is selected
+    if (selectedTripId !== null && tripId !== null && tripId !== selectedTripId) {
+      return;
+    }
     setHoveredTripId(tripId);
-  }, []);
+  }, [selectedTripId]);
 
   const selectTrip = useCallback((tripId: string) => {
     setSelectedTripId((prev) => (prev === tripId ? null : tripId));

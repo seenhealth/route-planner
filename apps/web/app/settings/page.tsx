@@ -14,9 +14,16 @@ export default function SettingsPage() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [driveTime, setDriveTime] = useState(45);
   const [timeWindowBuffer, setTimeWindowBuffer] = useState(60);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Per-section save state
+  const [driveTimeSaving, setDriveTimeSaving] = useState(false);
+  const [driveTimeSaved, setDriveTimeSaved] = useState(false);
+  const [driveTimeError, setDriveTimeError] = useState<string | null>(null);
+
+  const [bufferSaving, setBufferSaving] = useState(false);
+  const [bufferSaved, setBufferSaved] = useState(false);
+  const [bufferError, setBufferError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/config")
@@ -26,21 +33,18 @@ export default function SettingsPage() {
         setDriveTime(data.driveTimeLimitMinutes);
         setTimeWindowBuffer(data.timeWindowBufferMinutes);
       })
-      .catch(() => setError("Failed to load settings"));
+      .catch(() => setLoadError("Failed to load settings"));
   }, []);
 
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    setSaved(false);
-    setError(null);
+  const handleSaveDriveTime = useCallback(async () => {
+    setDriveTimeSaving(true);
+    setDriveTimeSaved(false);
+    setDriveTimeError(null);
     try {
       const res = await fetch("/api/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          driveTimeLimitMinutes: driveTime,
-          timeWindowBufferMinutes: timeWindowBuffer,
-        }),
+        body: JSON.stringify({ driveTimeLimitMinutes: driveTime }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -48,21 +52,44 @@ export default function SettingsPage() {
       }
       const data: AppConfig = await res.json();
       setConfig(data);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setDriveTimeSaved(true);
+      setTimeout(() => setDriveTimeSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save settings");
+      setDriveTimeError(err instanceof Error ? err.message : "Failed to save");
     } finally {
-      setSaving(false);
+      setDriveTimeSaving(false);
     }
-  }, [driveTime, timeWindowBuffer]);
+  }, [driveTime]);
 
-  const hasChanges = config !== null && (
-    driveTime !== config.driveTimeLimitMinutes ||
-    timeWindowBuffer !== config.timeWindowBufferMinutes
-  );
+  const handleSaveBuffer = useCallback(async () => {
+    setBufferSaving(true);
+    setBufferSaved(false);
+    setBufferError(null);
+    try {
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeWindowBufferMinutes: timeWindowBuffer }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+      const data: AppConfig = await res.json();
+      setConfig(data);
+      setBufferSaved(true);
+      setTimeout(() => setBufferSaved(false), 3000);
+    } catch (err) {
+      setBufferError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setBufferSaving(false);
+    }
+  }, [timeWindowBuffer]);
 
-  if (config === null && !error) {
+  const driveTimeChanged = config !== null && driveTime !== config.driveTimeLimitMinutes;
+  const bufferChanged = config !== null && timeWindowBuffer !== config.timeWindowBufferMinutes;
+
+  if (config === null && !loadError) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
         Loading settings...
@@ -77,6 +104,9 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Configure routing parameters for trip optimization.
         </p>
+        {loadError && (
+          <p className="text-sm text-destructive mt-1">{loadError}</p>
+        )}
       </div>
 
       <Card>
@@ -125,16 +155,16 @@ export default function SettingsPage() {
 
           <div className="flex items-center gap-3">
             <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
+              onClick={handleSaveDriveTime}
+              disabled={driveTimeSaving || !driveTimeChanged}
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {driveTimeSaving ? "Saving..." : "Save Changes"}
             </Button>
-            {saved && (
+            {driveTimeSaved && (
               <span className="text-sm text-green-600">Settings saved</span>
             )}
-            {error && (
-              <span className="text-sm text-destructive">{error}</span>
+            {driveTimeError && (
+              <span className="text-sm text-destructive">{driveTimeError}</span>
             )}
           </div>
         </CardContent>
@@ -145,7 +175,7 @@ export default function SettingsPage() {
           <CardTitle>Time Window Buffer</CardTitle>
           <CardDescription>
             Passengers are grouped by scheduled time. This sets how much
-            flexibility (±) around each passenger&apos;s time the optimizer
+            flexibility (&plusmn;) around each passenger&apos;s time the optimizer
             has. A smaller buffer means stricter time grouping.
           </CardDescription>
         </CardHeader>
@@ -167,7 +197,7 @@ export default function SettingsPage() {
                   }}
                   className="w-20 text-right"
                 />
-                <span className="text-sm text-muted-foreground">± min</span>
+                <span className="text-sm text-muted-foreground">&plusmn; min</span>
               </div>
             </div>
             <Slider
@@ -179,9 +209,24 @@ export default function SettingsPage() {
               onValueChange={(v) => setTimeWindowBuffer(v[0])}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>±15 min (strict)</span>
-              <span>±180 min (flexible)</span>
+              <span>&plusmn;15 min (strict)</span>
+              <span>&plusmn;180 min (flexible)</span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleSaveBuffer}
+              disabled={bufferSaving || !bufferChanged}
+            >
+              {bufferSaving ? "Saving..." : "Save Changes"}
+            </Button>
+            {bufferSaved && (
+              <span className="text-sm text-green-600">Settings saved</span>
+            )}
+            {bufferError && (
+              <span className="text-sm text-destructive">{bufferError}</span>
+            )}
           </div>
         </CardContent>
       </Card>
