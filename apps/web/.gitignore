@@ -1,0 +1,5 @@
+# database
+data/
+
+# local cache (development fallback for Vercel KV)
+.cache/
