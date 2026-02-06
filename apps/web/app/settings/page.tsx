@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { VehicleConfigSection } from "@/components/settings/vehicle-config";
+import { Trash2 } from "lucide-react";
 import type { AppConfig } from "@/lib/db";
 
 export default function SettingsPage() {
@@ -132,6 +133,57 @@ export default function SettingsPage() {
       </Card>
 
       <VehicleConfigSection />
+
+      <GeocodeCacheSection />
     </div>
+  );
+}
+
+function GeocodeCacheSection() {
+  const [clearing, setClearing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const handleClear = useCallback(async () => {
+    setClearing(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/cache?prefix=geocode", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to clear cache");
+      const data = await res.json();
+      setResult(`Cleared ${data.deleted} cached entries. Recompute routes to re-geocode.`);
+      setTimeout(() => setResult(null), 5000);
+    } catch {
+      setResult("Failed to clear geocode cache");
+    } finally {
+      setClearing(false);
+    }
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Geocode Cache</CardTitle>
+        <CardDescription>
+          Address coordinates are cached for 30 days. If markers appear at
+          wrong locations, clear the cache and recompute routes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleClear}
+            disabled={clearing}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            {clearing ? "Clearing..." : "Clear Geocode Cache"}
+          </Button>
+          {result && (
+            <span className="text-sm text-muted-foreground">{result}</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

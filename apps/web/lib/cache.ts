@@ -1,5 +1,5 @@
-import { put, list } from "@vercel/blob";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { put, list, del } from "@vercel/blob";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from "fs";
 import { join } from "path";
 
 const TTL_SECONDS = 2592000; // 30 days
@@ -72,4 +72,40 @@ export async function cacheSet<T>(key: string, value: T): Promise<void> {
   };
   const filePath = getLocalCachePath(key);
   writeFileSync(filePath, JSON.stringify(entry), "utf-8");
+}
+
+/** Delete all cache entries whose key starts with a given prefix (e.g. "geocode"). */
+export async function cacheClearByPrefix(prefix: string): Promise<number> {
+  let deleted = 0;
+
+  if (isBlobAvailable()) {
+    // Blob: list all blobs under the cache prefix and delete matching ones
+    const safePrefix = prefix.replace(/:/g, "_");
+    let cursor: string | undefined;
+    do {
+      const result = await list({
+        prefix: `${CACHE_BLOB_PREFIX}${safePrefix}`,
+        limit: 100,
+        cursor,
+      });
+      if (result.blobs.length > 0) {
+        await del(result.blobs.map((b) => b.url));
+        deleted += result.blobs.length;
+      }
+      cursor = result.hasMore ? result.cursor : undefined;
+    } while (cursor);
+  }
+
+  // Also clear local cache
+  if (existsSync(LOCAL_CACHE_DIR)) {
+    const safePrefix = prefix.replace(/:/g, "_");
+    for (const file of readdirSync(LOCAL_CACHE_DIR)) {
+      if (file.startsWith(safePrefix)) {
+        unlinkSync(join(LOCAL_CACHE_DIR, file));
+        deleted++;
+      }
+    }
+  }
+
+  return deleted;
 }

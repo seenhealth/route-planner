@@ -96,18 +96,26 @@ export function RouteVisualization({
       {/* Passenger markers for active/selected trips */}
       {tripsWithMarkers.map((trip) =>
         trip.passengers
-          .filter((p) => p.lat !== 0 && p.lng !== 0)
+          .filter((p) => {
+            // Use destination coords for dropoffs, pickup coords for pickups
+            if (trip.type === "dropoff") return p.destLat !== 0 && p.destLng !== 0;
+            return p.lat !== 0 && p.lng !== 0;
+          })
           .map((passenger, i) => {
             const passengerKey = `${trip.id}-${i}`;
             const isHovered = passengerKey === hoveredPassengerKey;
             const isSelected = passengerKey === selectedPassengerKey;
             const isTripActive = trip.id === activeTripId;
 
+            // Dropoff markers at destination, pickup markers at home
+            const markerLat = trip.type === "dropoff" ? passenger.destLat : passenger.lat;
+            const markerLng = trip.type === "dropoff" ? passenger.destLng : passenger.lng;
+
             return (
               <StopMarker
                 key={passengerKey}
-                lat={passenger.lat}
-                lng={passenger.lng}
+                lat={markerLat}
+                lng={markerLng}
                 label={String(i + 1)}
                 color={trip.color}
                 scale={isHovered || isSelected ? 1.15 : 1}

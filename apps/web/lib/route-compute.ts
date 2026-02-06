@@ -59,6 +59,25 @@ async function computeWithRouteOptimization(
   const allPassengers = [...pickupPassengers, ...dropoffPassengers];
   await geocodePassengers(allPassengers);
 
+  // Log duplicate coordinates to help debug stacking markers
+  const coordMap = new Map<string, string[]>();
+  for (const { passenger } of allPassengers) {
+    if (passenger.lat !== 0 && passenger.lng !== 0) {
+      const key = `${passenger.lat.toFixed(6)},${passenger.lng.toFixed(6)}`;
+      const list = coordMap.get(key) ?? [];
+      const initials = passenger.name.split(/\s+/).map((w) => w[0] ?? "").join("").toUpperCase();
+      list.push(`${initials} (${passenger.address})`);
+      coordMap.set(key, list);
+    }
+  }
+  const dupes = [...coordMap.entries()].filter(([, names]) => names.length > 1);
+  if (dupes.length > 0) {
+    console.warn(`Geocode: ${dupes.length} coordinates shared by multiple passengers:`);
+    for (const [coord, names] of dupes) {
+      console.warn(`  ${coord}: ${names.join(" | ")}`);
+    }
+  }
+
   // Phase 3: Call Route Optimization API for both directions in parallel
   const [pickupTrips, dropoffTrips] = await Promise.all([
     optimizeTrips(
