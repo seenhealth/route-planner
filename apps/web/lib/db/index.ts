@@ -141,10 +141,12 @@ const LOCAL_CONFIG_DIR = join(process.cwd(), ".cache", "config");
 
 export interface AppConfig {
   driveTimeLimitMinutes: number; // max time any single passenger can be in vehicle
+  timeWindowBufferMinutes: number; // ± buffer around scheduled time for grouping
 }
 
 const DEFAULT_CONFIG: AppConfig = {
   driveTimeLimitMinutes: 45,
+  timeWindowBufferMinutes: 60,
 };
 
 export async function getConfig(): Promise<AppConfig> {

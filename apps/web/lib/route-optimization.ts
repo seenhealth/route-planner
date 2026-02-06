@@ -124,6 +124,7 @@ export async function optimizeTrips(
   passengers: { passenger: Passenger; index: number }[],
   vehicles: Vehicle[],
   driveTimeLimitMinutes: number,
+  timeWindowBufferMinutes: number,
   type: "pickup" | "dropoff"
 ): Promise<Trip[]> {
   const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
@@ -153,7 +154,7 @@ export async function optimizeTrips(
   const dayStartISO = today.toISOString(); // midnight
   const dayEndISO = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
-  const TIME_WINDOW_BUFFER_MIN = 60; // ±60 min around scheduled time
+  const TIME_WINDOW_BUFFER_MIN = timeWindowBufferMinutes;
 
   const shipments: Shipment[] = geocoded.map(({ passenger }, i) => {
     // For pickups, the home is the pickup address (lat/lng).

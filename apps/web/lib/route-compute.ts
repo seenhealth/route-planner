@@ -84,12 +84,14 @@ async function computeWithRouteOptimization(
       pickupPassengers,
       vehicleConfig.vehicles,
       config.driveTimeLimitMinutes,
+      config.timeWindowBufferMinutes,
       "pickup"
     ),
     optimizeTrips(
       dropoffPassengers,
       vehicleConfig.vehicles,
       config.driveTimeLimitMinutes,
+      config.timeWindowBufferMinutes,
       "dropoff"
     ),
   ]);

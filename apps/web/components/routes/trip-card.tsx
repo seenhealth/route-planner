@@ -3,8 +3,9 @@
 import type { Trip } from "@route-planner/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, MapPin } from "lucide-react";
+import { Users, Clock, MapPin, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getEarliestTime } from "@/lib/trip-utils";
 
 interface TripCardProps {
   trip: Trip;
@@ -46,6 +47,7 @@ export function TripCard({
 }: TripCardProps) {
   const duration = computeTotalDuration(trip);
   const stops = computeStopCount(trip);
+  const earliest = getEarliestTime(trip);
 
   return (
     <Card
@@ -72,6 +74,12 @@ export function TripCard({
           </Badge>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {earliest && (
+            <div className="flex items-center gap-1">
+              <CalendarClock className="h-3 w-3" />
+              <span>{earliest}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <Users className="h-3 w-3" />
             <span>{trip.passengerCount}</span>

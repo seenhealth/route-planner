@@ -13,6 +13,7 @@ import type { AppConfig } from "@/lib/db";
 export default function SettingsPage() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [driveTime, setDriveTime] = useState(45);
+  const [timeWindowBuffer, setTimeWindowBuffer] = useState(60);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export default function SettingsPage() {
       .then((data: AppConfig) => {
         setConfig(data);
         setDriveTime(data.driveTimeLimitMinutes);
+        setTimeWindowBuffer(data.timeWindowBufferMinutes);
       })
       .catch(() => setError("Failed to load settings"));
   }, []);
@@ -35,7 +37,10 @@ export default function SettingsPage() {
       const res = await fetch("/api/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ driveTimeLimitMinutes: driveTime }),
+        body: JSON.stringify({
+          driveTimeLimitMinutes: driveTime,
+          timeWindowBufferMinutes: timeWindowBuffer,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -50,9 +55,12 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [driveTime]);
+  }, [driveTime, timeWindowBuffer]);
 
-  const hasChanges = config !== null && driveTime !== config.driveTimeLimitMinutes;
+  const hasChanges = config !== null && (
+    driveTime !== config.driveTimeLimitMinutes ||
+    timeWindowBuffer !== config.timeWindowBufferMinutes
+  );
 
   if (config === null && !error) {
     return (
@@ -128,6 +136,52 @@ export default function SettingsPage() {
             {error && (
               <span className="text-sm text-destructive">{error}</span>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Time Window Buffer</CardTitle>
+          <CardDescription>
+            Passengers are grouped by scheduled time. This sets how much
+            flexibility (±) around each passenger&apos;s time the optimizer
+            has. A smaller buffer means stricter time grouping.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="tw-slider">Buffer</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="tw-input"
+                  type="number"
+                  min={15}
+                  max={180}
+                  step={15}
+                  value={timeWindowBuffer}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (val >= 15 && val <= 180) setTimeWindowBuffer(val);
+                  }}
+                  className="w-20 text-right"
+                />
+                <span className="text-sm text-muted-foreground">± min</span>
+              </div>
+            </div>
+            <Slider
+              id="tw-slider"
+              min={15}
+              max={180}
+              step={15}
+              value={[timeWindowBuffer]}
+              onValueChange={(v) => setTimeWindowBuffer(v[0])}
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>±15 min (strict)</span>
+              <span>±180 min (flexible)</span>
+            </div>
           </div>
         </CardContent>
       </Card>

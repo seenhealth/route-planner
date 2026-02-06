@@ -19,6 +19,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const driveTimeLimitMinutes = Number(body.driveTimeLimitMinutes);
+    const timeWindowBufferMinutes = Number(body.timeWindowBufferMinutes ?? 60);
 
     if (isNaN(driveTimeLimitMinutes) || driveTimeLimitMinutes < 15 || driveTimeLimitMinutes > 120) {
       return NextResponse.json(
@@ -27,7 +28,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const config: AppConfig = { driveTimeLimitMinutes };
+    const config: AppConfig = { driveTimeLimitMinutes, timeWindowBufferMinutes };
     await saveConfig(config);
     return NextResponse.json(config);
   } catch (err) {
