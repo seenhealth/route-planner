@@ -42,19 +42,27 @@ function formatRelativeTime(dateStr: string): string {
 interface ManifestSelectorProps {
   selectedId: string | null;
   onSelect: (manifest: ManifestOption) => void;
+  /** Auto-select the most recent manifest on first load */
+  autoSelectFirst?: boolean;
 }
 
-export function ManifestSelector({ selectedId, onSelect }: ManifestSelectorProps) {
+export function ManifestSelector({ selectedId, onSelect, autoSelectFirst }: ManifestSelectorProps) {
   const [manifests, setManifests] = useState<ManifestOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [didAutoSelect, setDidAutoSelect] = useState(false);
 
   const fetchManifests = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/manifests");
       if (res.ok) {
-        const data = await res.json();
+        const data: ManifestOption[] = await res.json();
         setManifests(data);
+        // Auto-select most recent manifest on first load
+        if (autoSelectFirst && !didAutoSelect && data.length > 0) {
+          setDidAutoSelect(true);
+          onSelect(data[0]);
+        }
       }
     } catch {
       // ignore
@@ -65,6 +73,7 @@ export function ManifestSelector({ selectedId, onSelect }: ManifestSelectorProps
 
   useEffect(() => {
     fetchManifests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selected = manifests.find((m) => m.id === selectedId);

@@ -102,6 +102,7 @@ export default function RoutesPage() {
           <ManifestSelector
             selectedId={selectedManifest?.id ?? null}
             onSelect={handleManifestSelect}
+            autoSelectFirst
           />
           <div className="flex items-center gap-3">
             {cacheInfo && (
