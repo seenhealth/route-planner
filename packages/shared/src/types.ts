@@ -40,6 +40,24 @@ export interface RouteData {
   dropoffTrips: Trip[];
 }
 
+export interface Vehicle {
+  id: string;
+  name: string;
+  capacity: number;
+}
+
+export interface VehicleConfig {
+  vehicles: Vehicle[];
+}
+
+export const DEFAULT_VEHICLES: Vehicle[] = [
+  { id: "van-1", name: "Van 1", capacity: 10 },
+  { id: "sedan-1", name: "Sedan 1", capacity: 4 },
+  { id: "sedan-2", name: "Sedan 2", capacity: 4 },
+  { id: "sedan-3", name: "Sedan 3", capacity: 4 },
+  { id: "sedan-4", name: "Sedan 4", capacity: 4 },
+];
+
 export interface ManifestRow {
   jobDate: string;
   idNumber: string;
