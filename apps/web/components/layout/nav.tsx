@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MapPin, Upload } from "lucide-react";
+import { LayoutDashboard, MapPin, Upload, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/routes", label: "Routes", icon: MapPin },
   { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Nav({ className }: { className?: string }) {

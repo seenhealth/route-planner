@@ -85,7 +85,7 @@ function normalizeAddr(addr: string): string {
   return (addr || "").replace(/\s+/g, " ").trim();
 }
 
-function rowToPassenger(row: ManifestRow): Passenger {
+export function rowToPassenger(row: ManifestRow): Passenger {
   const leg = classifyLeg(row.jobID);
   const time = leg === "pickup" ? row.aptTime : row.schPU;
 

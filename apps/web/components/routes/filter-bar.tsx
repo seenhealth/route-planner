@@ -1,15 +1,25 @@
 "use client";
 
+import type { Trip } from "@route-planner/shared";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { VehicleFilter } from "./vehicle-filter";
 
 interface FilterBarProps {
   typeFilter: "all" | "pickup" | "dropoff";
   onTypeChange: (value: "all" | "pickup" | "dropoff") => void;
-  timeFilter: "all" | "morning" | "midday" | "afternoon";
-  onTimeChange: (value: "all" | "morning" | "midday" | "afternoon") => void;
+  /** All trips (before vehicle filtering) for deriving vehicle list + counts */
+  trips: Trip[];
+  selectedVehicles: Set<string>;
+  onVehicleSelectionChange: (vehicles: Set<string>) => void;
 }
 
-export function FilterBar({ typeFilter, onTypeChange, timeFilter, onTimeChange }: FilterBarProps) {
+export function FilterBar({
+  typeFilter,
+  onTypeChange,
+  trips,
+  selectedVehicles,
+  onVehicleSelectionChange,
+}: FilterBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <ToggleGroup type="single" value={typeFilter} onValueChange={(v) => onTypeChange(v as FilterBarProps["typeFilter"])}>
@@ -18,12 +28,11 @@ export function FilterBar({ typeFilter, onTypeChange, timeFilter, onTimeChange }
         <ToggleGroupItem value="dropoff">Dropoffs</ToggleGroupItem>
       </ToggleGroup>
 
-      <ToggleGroup type="single" value={timeFilter} onValueChange={(v) => onTimeChange(v as FilterBarProps["timeFilter"])}>
-        <ToggleGroupItem value="all">All Times</ToggleGroupItem>
-        <ToggleGroupItem value="morning">Morning</ToggleGroupItem>
-        <ToggleGroupItem value="midday">Midday</ToggleGroupItem>
-        <ToggleGroupItem value="afternoon">Afternoon</ToggleGroupItem>
-      </ToggleGroup>
+      <VehicleFilter
+        trips={trips}
+        selectedVehicles={selectedVehicles}
+        onSelectionChange={onVehicleSelectionChange}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Nav } from "./nav";
+import Script from "next/script";
 
 export function Header() {
   return (
@@ -21,6 +22,13 @@ export function Header() {
           <Nav className="mt-4" />
         </SheetContent>
       </Sheet>
+      {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
       <h1 className="text-lg font-semibold">Seen Health Transport Router</h1>
     </header>
   );
