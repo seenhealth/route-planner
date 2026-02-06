@@ -6,7 +6,7 @@ import type { ManifestRow } from "@route-planner/shared";
 import { computeRoutes } from "@/lib/route-compute";
 
 function computeConfigHash(
-  config: { driveTimeLimitMinutes: number },
+  config: { driveTimeLimitMinutes: number; timeWindowBufferMinutes: number },
   vehicles: { vehicles: { id: string; name: string; capacity: number }[] }
 ): string {
   const payload = JSON.stringify({ config, vehicles });

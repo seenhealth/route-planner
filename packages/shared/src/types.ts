@@ -51,11 +51,15 @@ export interface VehicleConfig {
 }
 
 export const DEFAULT_VEHICLES: Vehicle[] = [
-  { id: "van-1", name: "Van 1", capacity: 10 },
-  { id: "sedan-1", name: "Sedan 1", capacity: 4 },
-  { id: "sedan-2", name: "Sedan 2", capacity: 4 },
-  { id: "sedan-3", name: "Sedan 3", capacity: 4 },
-  { id: "sedan-4", name: "Sedan 4", capacity: 4 },
+  { id: "van-1", name: "Van 1", capacity: 6 },
+  { id: "van-2", name: "Van 2", capacity: 6 },
+  { id: "van-3", name: "Van 3", capacity: 6 },
+  { id: "van-4", name: "Van 4", capacity: 6 },
+  { id: "sedan-1", name: "Sedan 1", capacity: 3 },
+  { id: "sedan-2", name: "Sedan 2", capacity: 3 },
+  { id: "sedan-3", name: "Sedan 3", capacity: 3 },
+  { id: "sedan-4", name: "Sedan 4", capacity: 3 },
+  { id: "minivan-1", name: "Minivan 1", capacity: 5 },
 ];
 
 export interface ManifestRow {
