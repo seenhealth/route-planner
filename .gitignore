@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+
+# Next.js
+.next
+
+# Cache
+.cache
+.turbo
+
+# Environment variables
+.env*
+
+# Data & databases
+data/
+*.db
+
+# Build output
+dist
